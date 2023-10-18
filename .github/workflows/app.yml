@@ -41,7 +41,7 @@ jobs:
     - name: Display .env file
 
       run: |
-
+            touch .env
             echo "MYSQL_DATABASE=${{ secrets.MYSQL_DATABASE}}" >> .env
             echo "MYSQL_USER=${{ secrets.MYSQL_USER}}" >> .env
             echo "MYSQL_PASSWORD=${{ secrets.MYSQL_PASSWORD}}" >> .env
