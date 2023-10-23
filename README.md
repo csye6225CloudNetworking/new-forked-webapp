@@ -1,4 +1,3 @@
 
 fdd
-lllllllll
-kkd
+llllllll
