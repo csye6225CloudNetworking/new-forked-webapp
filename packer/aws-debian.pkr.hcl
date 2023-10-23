@@ -70,10 +70,10 @@ source "amazon-ebs" "debian-ami" {
 
 build {
 
-  sources = ["source.amazon-ebs.debian-ami"]
+  sources = ["source.amazon-ebs.debian-ami"
 
   provisioner "file" {
-source      = "webapp.zip"
+    source      = "webapp.zip"
     destination = "~/webapp.zip"
   }
 
