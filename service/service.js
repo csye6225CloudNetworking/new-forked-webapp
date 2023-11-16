@@ -6,6 +6,7 @@ import Assignment from '../models/assign-model.js';
 // Sync the database to create tables
 // Service function to get all users
 export const bootstrap = async () => {
+  
     await User.sync();
     await Assignment.sync();
     try {

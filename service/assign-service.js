@@ -1,5 +1,13 @@
 import Assignment from '../models/assign-model.js';
+import StatsD from 'node-statsd';
+import {logger} from '../logger.js';
 import assign from '../models/assign-model.js';
+
+const client = new StatsD({
+  errorHandler: function (error) {
+    console.error("StatsD error: ", error);
+  }
+});
 
 // Create a new assignment
 export async function createAssignment(name, points, num_of_attempts, deadline, createdBy) {
@@ -18,9 +26,11 @@ export async function createAssignment(name, points, num_of_attempts, deadline, 
       const assignment = await Assignment.create({
         name, points, num_of_attempts, deadline,createdBy
       });
-  
+      logger.info('Assignment Created!');
+      client.increment('endpoint.v1_assignments_id.hits');
       return assignment;
     } catch (error) {
+      logger.error('Error while creating assignment!');
       console.error('Error creating assignment:', error);
       throw error;
     }
@@ -29,10 +39,11 @@ export async function createAssignment(name, points, num_of_attempts, deadline, 
 export async function getAssignmentsByUser() {
     try {
       const assignments = await Assignment.findAll();
-  
+      logger.info('Get all assignments!');
+      client.increment('endpoint.v1_assignments_id.hits');
       return assignments;
-    } catch (error) {
-      console.error('Error retrieving assignments:', error);
+    } catch (error) {   
+      logger.error('Error while getting all assignments!');
       throw error;
     }
   }
@@ -49,11 +60,14 @@ export async function getAssignmentsByUser() {
         }
         if (email === userEmail) {
           const assignment = await Assignment.findOne({ where: { id : assignmentId } });
+          logger.info('Get all assignments by Id!');
+          client.increment('endpoint.v1_get_all_assignments.hits');
           return assignment;
 
       }
   } catch (error) {
       throw new Error(error.message);
+      logger.error('Error while getting all assignments!');
     }
 
 
@@ -82,10 +96,13 @@ export async function getAssignmentsByUser() {
             },
             { where: { id: assignmentId } }
     );
+    logger.info('Update assignments!');
+    client.increment('endpoint.v1_update_all_assignments_id.hits');
     return true;
         }
     } catch (error) {
         throw new Error(error.message);
+        logger.error("update assignments not worked!");
       }
 
   }
@@ -100,11 +117,14 @@ export async function getAssignmentsByUser() {
         if (userEmail == assignment.createdBy) {
 
             await Assignment.destroy({ where: { id: assignmentId } });
+            logger.info('delete assignments!');
+            client.increment('endpoint.v1_delete_by_id_assignments_id.hits');
             return true;
         }else {
             return false;
           }
         } catch (error) {
+          logger.error('error while deleting assignment');
             throw new Error(error.message);
           }
         };   

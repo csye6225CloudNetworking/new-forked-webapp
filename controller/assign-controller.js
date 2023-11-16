@@ -35,8 +35,13 @@ export async function createAssignment(req, res) {
   export async function getAssignmentsByUser(req, res) {
  
     try {
+      if (!req.headers.authorization) {
+        res.status(400).json({ error: 'Missing authentication header' });
+        return;
+      }
       const assignments = await assignService.getAssignmentsByUser();
       res.status(200).json(assignments);
+    
     } catch (error) {
       if (error.message === "Forbidden"){
       res.status(403).json({ error: 'Forbidden' });
@@ -53,6 +58,10 @@ export async function getAssignmentsById(req, res) {
   console.log(assignmentId);
 
   try {
+    if (!req.headers.authorization) {
+      res.status(400).json({ error: 'Missing authentication header' });
+      return;
+    }
     const createdBy = getCred(req)[0]
     // Call the assignService to delete the assignment by ID
    if ( await assignService.getAssignmentsById(assignmentId,createdBy)){
@@ -73,7 +82,15 @@ export async function getAssignmentsById(req, res) {
     console.log(assignmentId);
   
     try {
+      if (!req.headers.authorization) {
+        res.status(400).json({ error: 'Missing authentication header' });
+        return;
+      }
       const createdBy = getCred(req)[0]
+      if (Object.keys(req.body).length !== 0) {
+        res.status(400).json({ message: 'Request body should not be present for deletion.' });
+        return;
+      }
       // Call the assignService to delete the assignment by ID
      if ( await assignService.deleteAssignmentById(assignmentId, createdBy)){
         res.status(204).send(); // Respond with a success status (204 No Content)
@@ -93,7 +110,10 @@ export async function getAssignmentsById(req, res) {
   const email = getCred(req)[0];
 
   try {
-  
+    if (!req.headers.authorization) {
+      res.status(400).json({ error: 'Missing authentication header' });
+      return;
+    }
 
     if(await assignService.updateAssignmentById(assignmentId, updatedAssignmentData,email)){
         res.status(204).json({message: 'No Content'}); // Respond with the updated assignment data  
