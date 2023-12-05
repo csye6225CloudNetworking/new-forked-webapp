@@ -102,24 +102,26 @@ jobs:
       - name: Wait for Instance Refresh
         id: wait-for-refresh
         run: |
-          # Add commands to wait for the instance refresh completion
-          asg_name="asg_name"
-          status="Pending"
-          while [ "$status" != "Successful" ]; do
-            sleep 60
-            status=$(aws autoscaling describe-instance-refreshes \
-                      --auto-scaling-group-name "$asg_name" \
-                      --query 'InstanceRefreshes[0].Status' \
-                      --output text)
-          echo "Current Instance Refresh Status: $status"
-          done
-    
+            # Add commands to wait for the instance refresh completion
+            asg_name="asg_name"
+            status="Pending"
+            while [ "$status" != "Successful" -a "$status" != "Failed" -a "$status" != "Cancelling" ]; do
+              sleep 60
+              status=$(aws autoscaling describe-instance-refreshes \
+                        --auto-scaling-group-name "$asg_name" \
+                        --query 'InstanceRefreshes[0].Status' \
+                        --output text)
+              echo "Current Instance Refresh Status: $status"
+            done
+      
+
           if [ "$status" != "Successful" ]; then
             echo "Instance refresh failed. Exiting workflow with an error."
             exit 1
           else
             echo "Instance Refresh Status: Successful"
           fi
+
 
 
 
