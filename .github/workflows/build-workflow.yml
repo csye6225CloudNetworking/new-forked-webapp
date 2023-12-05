@@ -108,19 +108,17 @@ jobs:
           while [ "$status" != "Successful" ]; do
             sleep 60
             status=$(aws autoscaling describe-instance-refreshes \
-
                       --auto-scaling-group-name "$asg_name" \
-
                       --query 'InstanceRefreshes[0].Status' \
                       --output text)
+          echo "Current Instance Refresh Status: $status"
           done
-      - name: Check Instance Refresh Status
-        run: |
-          # Add commands to check the instance refresh status
-          echo "Instance Refresh Status: ${{ steps.wait-for-refresh.outputs.status }}"
-          if [ "${{ steps.wait-for-refresh.outputs.status }}" != "Successful" ]; then
+    
+          if [ "$status" != "Successful" ]; then
             echo "Instance refresh failed. Exiting workflow with an error."
             exit 1
+          else
+            echo "Instance Refresh Status: Successful"
           fi
 
 
