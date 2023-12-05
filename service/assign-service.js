@@ -1,6 +1,9 @@
 import Assignment from '../models/assign-model.js';
+import Submission from '../models/submission-model.js';
+import { v4 as uuidv4 } from 'uuid';
 import StatsD from 'node-statsd';
 import {logger} from '../logger.js';
+import { publishToSNS } from './sns-service.js'; 
 import assign from '../models/assign-model.js';
 
 const client = new StatsD({
@@ -69,8 +72,98 @@ export async function getAssignmentsByUser() {
       throw new Error(error.message);
       logger.error('Error while getting all assignments!');
     }
+  }
 
+  export async function submitAssignmentById(assignmentId, userEmail, submissionData) {
+    try {
+      const assignment = await Assignment.findOne({ where: { id: assignmentId } });
+  
+      //user createdby match -> 403
+     // submissionData.count == num of attempts
 
+      if (!assignment) {
+        throw new Error(`Assignment with ID '${assignmentId}' not found.`);
+      }
+  
+      // Check if the assignment has passed the deadline
+      if (assignment.deadline < new Date()) {
+        throw new Error('Submission rejected. Deadline has passed.');
+      }
+  
+      // Check if the user has exceeded the number of attempts
+      if (assignment.num_of_attempts >= 4) {
+        throw new Error('Submission rejected');
+      }
+
+      const submissionCount = await Submission.count({
+        where: { assignment_id: assignment.id },
+      });
+
+      if (submissionCount >= assignment.num_of_attempts) {
+       
+        throw new Error('Submission rejected');
+      }
+  
+      const submissionResult = await yourSubmissionLogic(assignment, submissionData);
+
+      await Submission.create({
+        id: submissionResult.id,
+        assignment_id: assignment.id,
+        submission_url: submissionResult.submission_url,
+        submission_date: submissionResult.submission_date,
+        submission_updated: submissionResult.submission_updated,
+        
+      });
+  
+
+      const snsMessage = {
+        id: submissionResult.id,
+        assignment_id: assignment.id,
+        submission_url: submissionResult.submission_url,
+        submission_date: submissionResult.submission_date,
+        submission_updated: submissionResult.submission_updated,
+        userEmail: userEmail,
+      };
+  
+      await publishToSNS(snsMessage); 
+
+      await assignment.save();
+  
+      logger.info('Assignment Submitted!');4
+  
+      return {
+        id: submissionResult.id,
+        assignment_id: assignment.id,
+        submission_url: submissionResult.submission_url,
+        submission_date: submissionResult.submission_date,
+        submission_updated: submissionResult.submission_updated,
+      };
+    } catch (error) {
+      logger.error('Error while submitting assignment!');
+      console.error('Error submitting assignment:', error);
+      throw error;
+    }
+  }
+
+  async function yourSubmissionLogic(assignment, submissionData) {
+    try {
+      
+      if (assignment.num_of_attempts >= 4) {
+        throw new Error('Submission rejected');
+      }
+       // Generate a unique submission ID using uuid
+    const submissionId = uuidv4();
+ 
+      return {
+        id: submissionId, 
+        submission_url: submissionData.submission_url,
+        submission_date: new Date().toISOString(),
+        submission_updated: new Date().toISOString(),
+      };
+    } catch (error) {
+    
+      throw error;
+    }
   }
 
   export async function updateAssignmentById(assignmentId, updatedAssignmentData, userEmail){

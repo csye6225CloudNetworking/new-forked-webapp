@@ -75,6 +75,56 @@ jobs:
         id: packer_build
         run: |
          packer build packer/aws-debian.pkr.hcl 
+
+      - name: Set AWS Demo credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.DEMO_ACCESS_KEY_ID}}
+          aws-secret-access-key: ${{ secrets.DEMO_SECRET_KEY_ID }}
+          aws-profile: demo
+          aws-region: us-east-1
+      - name: Copying ami Artifacts and Launching Template
+        working-directory: ./packer
+        run: |
+          pwd
+          ls 
+          AMI_ID=$(jq -r '.builds[-1].artifact_id' manifest.json | cut -d ":" -f2)
+          echo $AMI_ID
+          LT_ID=$(aws ec2 describe-launch-templates --launch-template-name launch_temp_name | jq '.LaunchTemplates[].LaunchTemplateId')
+          LT_ID="${LT_ID%\"}"
+          LT_ID="${LT_ID#\"}"
+          echo $LT_ID
+          aws ec2 create-launch-template-version --launch-template-id $LT_ID --version-description WebVersion2 --source-version 1 --launch-template-data "ImageId=$AMI_ID"
+          aws autoscaling update-auto-scaling-group --auto-scaling-group-name asg_name --launch-template LaunchTemplateId=$LT_ID,Version='$Latest'
+      - name: Refreshing Instances
+        run: aws autoscaling start-instance-refresh --auto-scaling-group-name asg_name
+
+      - name: Wait for Instance Refresh
+        id: wait-for-refresh
+        run: |
+          # Add commands to wait for the instance refresh completion
+          asg_name="asg_name"
+          status="Pending"
+          while [ "$status" != "Successful" ]; do
+            sleep 60
+            status=$(aws autoscaling describe-instance-refreshes \
+
+                      --auto-scaling-group-name "$asg_name" \
+
+                      --query 'InstanceRefreshes[0].Status' \
+                      --output text)
+          done
+      - name: Check Instance Refresh Status
+        run: |
+          # Add commands to check the instance refresh status
+          echo "Instance Refresh Status: ${{ steps.wait-for-refresh.outputs.status }}"
+          if [ "${{ steps.wait-for-refresh.outputs.status }}" != "Successful" ]; then
+            echo "Instance refresh failed. Exiting workflow with an error."
+            exit 1
+          fi
+
+
+
          
 
       

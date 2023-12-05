@@ -4,10 +4,11 @@ import basicAuth from 'basic-auth';
 import User from '../models/user-model.js'; // Import your User model or user data source
 import bcrypt from 'bcrypt';
 
-
-
 export async function tokenize(req, res, next){
   const array = getCred(req)
+  if (array=='') {
+    return res.status(401).json("Unauthorized");
+  } 
   const username = array[0];
   const pw = array[1];
   const user = await findUser(username);
@@ -20,28 +21,26 @@ export async function tokenize(req, res, next){
     return res.status(401).json("Unauthorized")
   }
 
-  next();
+  return next();
 
 }
   
-export const getCred = (req) =>{
+export const getCred = (req,res) =>{
 
   const token = req.header('Authorization')
-  if(!token){
-    return res.status(401).json("Unauthorized")
+  let arr = '';
+  if(token == undefined){
+    return arr;
   }
-
-  const cred = Buffer.from(token.substring(6),'base64').toString('utf-8')
-  const array = cred.split(':');
-  return array;
-}
- 
+  else{
+    const cred = Buffer.from(token.substring(6),'base64').toString('utf-8')
 
 
-
-
-
-
+   arr = cred.split(':');
+  
+  };
+return arr;
+};
 
 
 /* module.exports = async (req, res, next) => {
